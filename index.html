@@ -11,7 +11,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="NGSA Rörgodstjocklek">
-  <!-- Byt till riktig ikonfil om du vill -->
   <link rel="apple-touch-icon" href="icon-192.png">
 
   <style>
@@ -129,8 +128,6 @@
       color: #43336b;
       text-align: left;
     }
-
-    /* PDF-läge – dölj knappar och bakgrund */
     @media print {
       body {
         background: #ffffff;
@@ -188,23 +185,14 @@
       <div>
         <label for="material">Material</label>
         <select id="material">
-          <!-- SS-EN ISO 3183 -->
-          <option value="L245NE">L245NE</option>
-          <option value="L245ME">L245ME</option>
-          <option value="L290NE">L290NE</option>
-          <option value="L290ME">L290ME</option>
-          <option value="L360NE">L360NE</option>
-          <option value="L360QE">L360QE</option>
-          <option value="L360ME">L360ME</option>
-          <option value="L415NE">L415NE</option>
-          <option value="L415QE">L415QE</option>
-          <option value="L415ME">L415ME</option>
-          <option value="L450QE">L450QE</option>
-          <option value="L450ME">L450ME</option>
-          <option value="L485QE">L485QE</option>
-          <option value="L485ME">L485ME</option>
-          <option value="L555QE">L555QE</option>
-          <option value="L555ME">L555ME</option>
+          <!-- Hopslagna ISO 3183-material (tabell 4.7) -->
+          <option value="L245">L245 (L245NE/ME)</option>
+          <option value="L290">L290 (L290NE/ME)</option>
+          <option value="L360">L360 (L360NE/QE/ME)</option>
+          <option value="L415">L415 (L415NE/QE/ME)</option>
+          <option value="L450">L450 (L450QE/ME)</option>
+          <option value="L485">L485 (L485QE/ME)</option>
+          <option value="L555">L555 (L555QE/ME)</option>
           <!-- ASME SA333 -->
           <option value="SA333G6">SA333 Gr.6</option>
         </select>
@@ -282,24 +270,15 @@
       }
     }
 
-    // Materialdata: R_t0,5 värden vid olika temperaturer
+    // Materialdata: R_t0,5 värden vid olika temperaturer, hopslagda grupper
     const materialData = {
-      L245NE: { temps:[20,60], values:[245,245] },
-      L245ME: { temps:[20,60], values:[245,245] },
-      L290NE: { temps:[20,60], values:[290,290] },
-      L290ME: { temps:[20,60], values:[290,290] },
-      L360NE: { temps:[20,60], values:[360,360] },
-      L360QE: { temps:[20,60], values:[360,360] },
-      L360ME: { temps:[20,60], values:[360,360] },
-      L415NE: { temps:[20,60], values:[415,415] },
-      L415QE: { temps:[20,60], values:[415,415] },
-      L415ME: { temps:[20,60], values:[415,415] },
-      L450QE: { temps:[20,60], values:[450,450] },
-      L450ME: { temps:[20,60], values:[450,450] },
-      L485QE: { temps:[20,60], values:[485,485] },
-      L485ME: { temps:[20,60], values:[485,485] },
-      L555QE: { temps:[20,60], values:[555,555] },
-      L555ME: { temps:[20,60], values:[555,555] },
+      L245: { temps:[20,60], values:[245,245] },
+      L290: { temps:[20,60], values:[290,290] },
+      L360: { temps:[20,60], values:[360,360] },
+      L415: { temps:[20,60], values:[415,415] },
+      L450: { temps:[20,60], values:[450,450] },
+      L485: { temps:[20,60], values:[485,485] },
+      L555: { temps:[20,60], values:[555,555] },
       SA333G6:{ temps:[20,50,100], values:[220,217,206] }
     };
 
@@ -331,7 +310,7 @@
       return null;
     }
 
-    // NGSA tabell 4.17 – Minsta nominella godstjocklek (gäller ej rostfritt)
+    // NGSA tabell 4.17 – minsta nominella godstjocklek (ej rostfritt)
     const minTnomTable = [
       { Dy: 60.3, t: 3.2 },
       { Dy: 76.1, t: 3.2 },
@@ -436,16 +415,13 @@
         <span class="small">
           Vald zon/förläggning ger f₀ = ${round(f0,2)}.<br/>
           Material: ${matKey}, R<sub>t0,5</sub> ≈ ${round(Rt,1)} N/mm² vid ${round(temp,1)} °C.<br/>
-          ${note}<br/>
-          Obs: tabell 4.17 gäller inte rostfritt stål.
+          ${note}
         </span>
       `;
 
-      // uppdatera visningsfältet för f0
       updateF0Field();
     }
 
-    // initiera f0 när sidan laddas
     window.addEventListener('load', updateF0Field);
   </script>
 </body>
