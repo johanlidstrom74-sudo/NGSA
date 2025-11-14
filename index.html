@@ -13,11 +13,11 @@
     }
     h1 {
       font-size: 1.6rem;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.3rem;
     }
     .card {
       background: #fff;
-      max-width: 680px;
+      max-width: 780px;
       margin-top: 1rem;
       padding: 1.5rem;
       border-radius: 12px;
@@ -41,6 +41,9 @@
       border: 1px solid #ccd1d6;
       font-size: 0.9rem;
       box-sizing: border-box;
+    }
+    input[readonly] {
+      background: #f0f2f5;
     }
     button {
       margin-top: 1rem;
@@ -74,30 +77,46 @@
 <body>
   <h1>Rörgodsberäkning enligt NGSA</h1>
   <p class="small">
-    Beräknar minsta godstjocklek för rörledning vid inre övertryck enligt<br />
-    <code>T<sub>min</sub> = (DP · D) / (20 · f₀ · R<sub>t0,5</sub> · z)</code>.<br />
-    Materialvärden R<sub>t0,5</sub> avser 20&nbsp;°C.
+    <code>T<sub>min</sub> = (DP · D) / (20 · f₀ · R<sub>t0,5</sub> · z)</code> <br/>
+    <code>T<sub>nom</sub> = T<sub>min</sub> + a + c</code><br/>
+    R<sub>t0,5</sub> tas ur materialtabeller (20–60&nbsp;°C resp. 20–100&nbsp;°C) med linjär interpolering.
   </p>
 
   <div class="card">
+    <h2 style="font-size:1.05rem;margin-top:0">1. Förläggning och zon (tabell 4.16)</h2>
+    <div class="grid" style="margin-bottom:0.5rem">
+      <div>
+        <label for="location">Ledningens förläggning</label>
+        <select id="location" onchange="updateF0()">
+          <option value="kompressor">I kompressorstation, mätstation samt mät- och reglerstation.</option>
+          <option value="utanSkydd">Utan skyddsrör i område för allmän väg och i spårområde för järnväg.</option>
+          <option value="rorbrygga">I rörbrygga.</option>
+          <option value="tunnel">I tunnel.</option>
+          <option value="linjeventil">I linjeventilstation och rensdonstation.</option>
+          <option value="skyddsror">I skyddsrör i område för allmän väg och i spårområde för järnväg.</option>
+          <option value="enskildVag">I område för enskild väg.</option>
+          <option value="annan">Annan icke nämnd förläggning.</option>
+        </select>
+      </div>
+      <div>
+        <label for="zone">Zon</label>
+        <select id="zone" onchange="updateF0()">
+          <option value="A">Zon A</option>
+          <option value="B">Zon B</option>
+          <option value="C">Zon C</option>
+          <option value="D">Zon D</option>
+          <option value="T">Zon T</option>
+        </select>
+      </div>
+      <div>
+        <label for="f0">Beräkningsfaktor f₀</label>
+        <input id="f0" type="number" step="0.01" readonly />
+        <div class="small">Sätts automatiskt från tabell 4.16</div>
+      </div>
+    </div>
+
+    <h2 style="font-size:1.05rem;margin-top:1rem">2. Material och temperatur</h2>
     <div class="grid">
-      <div>
-        <label for="dp">DP – Beräkningstryck (bar)</label>
-        <input id="dp" type="number" step="0.01" />
-      </div>
-      <div>
-        <label for="d">D – Ytterdiameter (mm)</label>
-        <input id="d" type="number" step="0.1" />
-      </div>
-      <div>
-        <label for="f0">f₀ – Beräkningsfaktor</label>
-        <input id="f0" type="number" step="0.01" />
-        <div class="small">Enligt tabell 4.16 (zon, förläggning)</div>
-      </div>
-      <div>
-        <label for="z">z – Svetsfaktor</label>
-        <input id="z" type="number" step="0.01" value="1.0" />
-      </div>
       <div>
         <label for="material">Material</label>
         <select id="material">
@@ -123,6 +142,31 @@
         </select>
       </div>
       <div>
+        <label for="temp">Beräkningstemperatur (°C)</label>
+        <input id="temp" type="number" step="1" value="20" />
+        <div class="small">Linjär interpolering mellan tabelltemperaturer.</div>
+      </div>
+    </div>
+
+    <h2 style="font-size:1.05rem;margin-top:1rem">3. Tryck, dimensioner och tillägg</h2>
+    <div class="grid">
+      <div>
+        <label for="dp">DP – Beräkningstryck (bar)</label>
+        <input id="dp" type="number" step="0.01" />
+      </div>
+      <div>
+        <label for="d">D – Ytterdiameter (mm)</label>
+        <input id="d" type="number" step="0.1" />
+      </div>
+      <div>
+        <label for="z">z – Svetsfaktor</label>
+        <input id="z" type="number" step="0.01" value="1.0" />
+      </div>
+      <div>
+        <label for="a">a – Minustolerans (mm)</label>
+        <input id="a" type="number" step="0.1" value="0" />
+      </div>
+      <div>
         <label for="c">c – Korrosionstillägg (mm)</label>
         <input id="c" type="number" step="0.1" value="0" />
       </div>
@@ -134,26 +178,78 @@
   </div>
 
   <script>
-    // Materialdata: R_t0,5 vid 20 °C (N/mm²)
-    const materials = {
-      L245NE: 245,
-      L245ME: 245,
-      L290NE: 290,
-      L290ME: 290,
-      L360NE: 360,
-      L360QE: 360,
-      L360ME: 360,
-      L415NE: 415,
-      L415QE: 415,
-      L415ME: 415,
-      L450QE: 450,
-      L450ME: 450,
-      L485QE: 485,
-      L485ME: 485,
-      L555QE: 555,
-      L555ME: 555,
-      SA333G6: 220   // ASME SA-333 / ASTM A333 Gr.6, 20 °C
+    // Tabell 4.16 – beräkningsfaktor f0
+    const f0Table = {
+      kompressor: { A:0.50, B:0.50, C:0.50, D:0.50, T:0.50 },
+      utanSkydd: { A:0.60, B:0.50, C:0.50, D:0.40, T:0.30 },
+      rorbrygga: { A:0.60, B:0.50, C:0.50, D:0.40, T:0.30 },
+      tunnel:    { A:0.60, B:0.60, C:0.50, D:0.40, T:0.30 },
+      linjeventil:{A:0.60, B:0.60, C:0.50, D:0.40, T:0.30 },
+      skyddsror: { A:0.72, B:0.60, C:0.50, D:0.40, T:0.30 },
+      enskildVag:{ A:0.72, B:0.60, C:0.50, D:0.40, T:0.30 },
+      annan:     { A:0.72, B:0.60, C:0.50, D:0.40, T:0.30 }
     };
+
+    function updateF0() {
+      const loc = document.getElementById('location').value;
+      const zone = document.getElementById('zone').value;
+      const f0Input = document.getElementById('f0');
+
+      const row = f0Table[loc];
+      if (row && row[zone]) {
+        f0Input.value = row[zone].toFixed(2);
+      } else {
+        f0Input.value = "";
+      }
+    }
+
+    // Materialdata: R_t0,5 värden vid olika temperaturer
+    // Temps i °C, värden i N/mm²
+    const materialData = {
+      L245NE: { temps:[20,60], values:[245,245] },
+      L245ME: { temps:[20,60], values:[245,245] },
+      L290NE: { temps:[20,60], values:[290,290] },
+      L290ME: { temps:[20,60], values:[290,290] },
+      L360NE: { temps:[20,60], values:[360,360] },
+      L360QE: { temps:[20,60], values:[360,360] },
+      L360ME: { temps:[20,60], values:[360,360] },
+      L415NE: { temps:[20,60], values:[415,415] },
+      L415QE: { temps:[20,60], values:[415,415] },
+      L415ME: { temps:[20,60], values:[415,415] },
+      L450QE: { temps:[20,60], values:[450,450] },
+      L450ME: { temps:[20,60], values:[450,450] },
+      L485QE: { temps:[20,60], values:[485,485] },
+      L485ME: { temps:[20,60], values:[485,485] },
+      L555QE: { temps:[20,60], values:[555,555] },
+      L555ME: { temps:[20,60], values:[555,555] },
+      // ASME SA333 Gr.6
+      SA333G6:{ temps:[20,50,100], values:[220,217,206] }
+    };
+
+    function interpolateRt(materialKey, T) {
+      const data = materialData[materialKey];
+      if (!data) return null;
+      const temps = data.temps;
+      const vals = data.values;
+
+      if (T <= temps[0]) return { Rt: vals[0], note: `Temperatur under tabellområde – värdet vid ${temps[0]} °C används.` };
+      if (T >= temps[temps.length-1]) return { Rt: vals[vals.length-1], note: `Temperatur över tabellområde – värdet vid ${temps[temps.length-1]} °C används.` };
+
+      // hitta intervall för linjär interpolering
+      for (let i = 0; i < temps.length - 1; i++) {
+        const T1 = temps[i];
+        const T2 = temps[i+1];
+        if (T >= T1 && T <= T2) {
+          const V1 = vals[i];
+          const V2 = vals[i+1];
+          const frac = (T - T1) / (T2 - T1);
+          const Rt = V1 + frac * (V2 - V1);
+          const note = `Linjär interpolering mellan ${T1} °C (${V1} N/mm²) och ${T2} °C (${V2} N/mm²).`;
+          return { Rt, note };
+        }
+      }
+      return null;
+    }
 
     function round(value, decimals) {
       const p = Math.pow(10, decimals);
@@ -163,32 +259,45 @@
     function calculate() {
       const dp = parseFloat(document.getElementById('dp').value);
       const d = parseFloat(document.getElementById('d').value);
-      const f0 = parseFloat(document.getElementById('f0').value);
       const z = parseFloat(document.getElementById('z').value);
+      const a = parseFloat(document.getElementById('a').value) || 0;
       const c = parseFloat(document.getElementById('c').value) || 0;
+      const f0 = parseFloat(document.getElementById('f0').value);
       const matKey = document.getElementById('material').value;
-      const Rt = materials[matKey];
-
+      const temp = parseFloat(document.getElementById('temp').value);
       const resultDiv = document.getElementById('result');
 
-      if (isNaN(dp) || isNaN(d) || isNaN(f0) || isNaN(z) || !Rt) {
-        resultDiv.innerHTML = "<span style='color:#c00'>Fyll i alla värden korrekt.</span>";
+      if (isNaN(dp) || isNaN(d) || isNaN(z) || isNaN(f0) || isNaN(temp)) {
+        resultDiv.innerHTML = "<span style='color:#c00'>Fyll i alla värden (tryck, diameter, svetsfaktor, temperatur) och se till att f₀ är satt.</span>";
         return;
       }
 
+      const interp = interpolateRt(matKey, temp);
+      if (!interp) {
+        resultDiv.innerHTML = "<span style='color:#c00'>Kunde inte hitta materialdata för valt material.</span>";
+        return;
+      }
+      const Rt = interp.Rt;
+      const note = interp.note;
+
       const Tmin = (dp * d) / (20 * f0 * Rt * z);
-      const Tnom = Tmin + c;
+      const Tnom = Tmin + a + c;
 
       resultDiv.innerHTML = `
         <strong>Resultat</strong><br/>
         T<sub>min</sub> = ${round(Tmin, 2)} mm<br/>
-        T<sub>nom</sub> = ${round(Tnom, 2)} mm (inkl. korrosionstillägg c = ${round(c,2)} mm)<br/>
+        T<sub>nom</sub> = ${round(Tnom, 2)} mm
+        (inkl. minustolerans a = ${round(a,2)} mm och korrosionstillägg c = ${round(c,2)} mm)<br/><br/>
         <span class="small">
-          Använt material: ${matKey}, R<sub>t0,5</sub> = ${Rt} N/mm² (20&nbsp;°C).<br/>
-          Obs: minustolerans a ingår inte – lägg till på T<sub>nom</sub> vid behov.
+          Vald zon/förläggning ger f₀ = ${round(f0,2)}.<br/>
+          Material: ${matKey}, R<sub>t0,5</sub> ≈ ${round(Rt,1)} N/mm² vid ${round(temp,1)} °C.<br/>
+          ${note}
         </span>
       `;
     }
+
+    // initiera f0 vid sidladdning
+    updateF0();
   </script>
 </body>
 </html>
