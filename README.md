@@ -1,0 +1,2 @@
+# NGSA
+Godstjocklek rör NGSA
