@@ -2,26 +2,28 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>NGSA – Rörgodsberäkning</title>
+  <title>Rörgodstjocklek enligt NGSA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       margin: 0;
       padding: 1.5rem;
-      background: #f4f6f8;
+      background: linear-gradient(135deg, #f6f0ff, #e5d9ff);
+      min-height: 100vh;
+      box-sizing: border-box;
     }
     h1 {
-      font-size: 1.6rem;
+      font-size: 1.7rem;
       margin-bottom: 0.3rem;
     }
     .card {
       background: #fff;
       max-width: 780px;
       margin-top: 1rem;
-      padding: 1.5rem;
-      border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+      padding: 1.5rem 1.6rem 1.2rem;
+      border-radius: 16px;
+      box-shadow: 0 6px 18px rgba(60, 34, 120, 0.18);
     }
     .grid {
       display: grid;
@@ -38,12 +40,12 @@
       width: 100%;
       padding: 0.4rem 0.5rem;
       border-radius: 6px;
-      border: 1px solid #ccd1d6;
+      border: 1px solid #c8c4e0;
       font-size: 0.9rem;
       box-sizing: border-box;
     }
     input[readonly] {
-      background: #f0f2f5;
+      background: #f5f3ff;
     }
     button {
       margin-top: 1rem;
@@ -53,31 +55,66 @@
       cursor: pointer;
       font-size: 0.95rem;
       font-weight: 600;
-      background: #1463b8;
+      background: #5f46c6;
       color: #fff;
     }
     button:hover {
-      background: #0f4f91;
+      background: #4a35a5;
     }
     .result {
       margin-top: 1.2rem;
-      padding-top: 0.8rem;
-      border-top: 1px solid #e0e4e8;
-      font-size: 0.95rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid #e0e4f0;
+      font-size: 1rem;
+      line-height: 1.5;
     }
     .result strong {
-      font-size: 1rem;
+      font-size: 1.05rem;
+    }
+    .result-main {
+      font-size: 1.1rem;
+      margin-bottom: 0.4rem;
+    }
+    .result-main span.label {
+      font-weight: 700;
+    }
+    .result-main span.value {
+      font-weight: 700;
     }
     .small {
       font-size: 0.8rem;
       color: #555;
     }
+    .warning {
+      margin-top: 0.4rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
+      background: #ffe6e6;
+      border: 1px solid #ff9b9b;
+      color: #b30000;
+      font-size: 0.9rem;
+    }
+    .ok {
+      margin-top: 0.4rem;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      background: #e5f7ea;
+      border: 1px solid #91d0a4;
+      color: #166534;
+      font-size: 0.85rem;
+    }
+    footer {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: #43336b;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <h1>Rörgodsberäkning enligt NGSA</h1>
+  <h1>Rörgodstjocklek enligt NGSA</h1>
   <p class="small">
-    <code>T<sub>min</sub> = (DP · D) / (20 · f₀ · R<sub>t0,5</sub> · z)</code> <br/>
+    <code>T<sub>min</sub> = (DP · D) / (20 · f₀ · R<sub>t0,5</sub> · z)</code><br/>
     <code>T<sub>nom</sub> = T<sub>min</sub> + a + c</code><br/>
     R<sub>t0,5</sub> tas ur materialtabeller (20–60&nbsp;°C resp. 20–100&nbsp;°C) med linjär interpolering.
   </p>
@@ -155,7 +192,7 @@
         <input id="dp" type="number" step="0.01" />
       </div>
       <div>
-        <label for="d">D – Ytterdiameter (mm)</label>
+        <label for="d">D – Ytterdiameter Dy (mm)</label>
         <input id="d" type="number" step="0.1" />
       </div>
       <div>
@@ -177,6 +214,8 @@
     <div id="result" class="result"></div>
   </div>
 
+  <footer>skapad av JL</footer>
+
   <script>
     // Tabell 4.16 – beräkningsfaktor f0
     const f0Table = {
@@ -196,7 +235,7 @@
       const f0Input = document.getElementById('f0');
 
       const row = f0Table[loc];
-      if (row && row[zone]) {
+      if (row && row[zone] !== undefined) {
         f0Input.value = row[zone].toFixed(2);
       } else {
         f0Input.value = "";
@@ -222,7 +261,7 @@
       L485ME: { temps:[20,60], values:[485,485] },
       L555QE: { temps:[20,60], values:[555,555] },
       L555ME: { temps:[20,60], values:[555,555] },
-      // ASME SA333 Gr.6
+      // ASME SA333 Gr.6 (tabell 4.8)
       SA333G6:{ temps:[20,50,100], values:[220,217,206] }
     };
 
@@ -232,10 +271,13 @@
       const temps = data.temps;
       const vals = data.values;
 
-      if (T <= temps[0]) return { Rt: vals[0], note: `Temperatur under tabellområde – värdet vid ${temps[0]} °C används.` };
-      if (T >= temps[temps.length-1]) return { Rt: vals[vals.length-1], note: `Temperatur över tabellområde – värdet vid ${temps[temps.length-1]} °C används.` };
+      if (T <= temps[0]) {
+        return { Rt: vals[0], note: `Temperatur under tabellområde – värdet vid ${temps[0]} °C används.` };
+      }
+      if (T >= temps[temps.length-1]) {
+        return { Rt: vals[vals.length-1], note: `Temperatur över tabellområde – värdet vid ${temps[temps.length-1]} °C används.` };
+      }
 
-      // hitta intervall för linjär interpolering
       for (let i = 0; i < temps.length - 1; i++) {
         const T1 = temps[i];
         const T2 = temps[i+1];
@@ -251,6 +293,34 @@
       return null;
     }
 
+    // NGSA tabell 4.17 – Minsta nominella godstjocklek (gäller ej rostfritt)
+    // Vi använder Dy (ytterdiameter) för att hitta rekommenderad minsta Tnom.
+    const minTnomTable = [
+      { Dy: 60.3, t: 3.2 },
+      { Dy: 76.1, t: 3.2 },
+      { Dy: 88.9, t: 3.2 },
+      { Dy:114.3, t: 3.2 },
+      { Dy:168.3, t: 4.5 },
+      { Dy:219.1, t: 4.5 },
+      { Dy:273.0, t: 5.0 },
+      { Dy:323.9, t: 5.2 },
+      { Dy:355.6, t: 5.6 },
+      { Dy:406.4, t: 6.3 },
+      { Dy:508.0, t: 6.3 },
+      { Dy:609.4, t: 6.3 }
+      // > 609,4: 1 % av Dy hanteras separat
+    ];
+
+    function getRecommendedTnom(Dy) {
+      for (let i = 0; i < minTnomTable.length; i++) {
+        if (Dy <= minTnomTable[i].Dy + 0.0001) {
+          return { t: minTnomTable[i].t, rule: `Tabell 4.17, Dy ≤ ${minTnomTable[i].Dy} mm` };
+        }
+      }
+      // > 609.4 mm -> 1 % av Dy
+      return { t: Dy * 0.01, rule: "Tabell 4.17, Dy > 609,4 mm (1 % av Dy)" };
+    }
+
     function round(value, decimals) {
       const p = Math.pow(10, decimals);
       return Math.round(value * p) / p;
@@ -258,13 +328,13 @@
 
     function calculate() {
       const dp = parseFloat(document.getElementById('dp').value);
-      const d = parseFloat(document.getElementById('d').value);
-      const z = parseFloat(document.getElementById('z').value);
-      const a = parseFloat(document.getElementById('a').value) || 0;
-      const c = parseFloat(document.getElementById('c').value) || 0;
+      const d  = parseFloat(document.getElementById('d').value);
+      const z  = parseFloat(document.getElementById('z').value);
+      const a  = parseFloat(document.getElementById('a').value) || 0;
+      const c  = parseFloat(document.getElementById('c').value) || 0;
       const f0 = parseFloat(document.getElementById('f0').value);
       const matKey = document.getElementById('material').value;
-      const temp = parseFloat(document.getElementById('temp').value);
+      const temp   = parseFloat(document.getElementById('temp').value);
       const resultDiv = document.getElementById('result');
 
       if (isNaN(dp) || isNaN(d) || isNaN(z) || isNaN(f0) || isNaN(temp)) {
@@ -281,23 +351,3 @@
       const note = interp.note;
 
       const Tmin = (dp * d) / (20 * f0 * Rt * z);
-      const Tnom = Tmin + a + c;
-
-      resultDiv.innerHTML = `
-        <strong>Resultat</strong><br/>
-        T<sub>min</sub> = ${round(Tmin, 2)} mm<br/>
-        T<sub>nom</sub> = ${round(Tnom, 2)} mm
-        (inkl. minustolerans a = ${round(a,2)} mm och korrosionstillägg c = ${round(c,2)} mm)<br/><br/>
-        <span class="small">
-          Vald zon/förläggning ger f₀ = ${round(f0,2)}.<br/>
-          Material: ${matKey}, R<sub>t0,5</sub> ≈ ${round(Rt,1)} N/mm² vid ${round(temp,1)} °C.<br/>
-          ${note}
-        </span>
-      `;
-    }
-
-    // initiera f0 vid sidladdning
-    updateF0();
-  </script>
-</body>
-</html>
