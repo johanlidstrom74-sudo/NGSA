@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>NGSA – Rörgodsberäkning</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 1.5rem;
+      background: #f4f6f8;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+    .card {
+      background: #fff;
+      max-width: 680px;
+      margin-top: 1rem;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+      gap: 0.75rem 1rem;
+    }
+    label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.4rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid #ccd1d6;
+      font-size: 0.9rem;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.6rem 1.4rem;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: #1463b8;
+      color: #fff;
+    }
+    button:hover {
+      background: #0f4f91;
+    }
+    .result {
+      margin-top: 1.2rem;
+      padding-top: 0.8rem;
+      border-top: 1px solid #e0e4e8;
+      font-size: 0.95rem;
+    }
+    .result strong {
+      font-size: 1rem;
+    }
+    .small {
+      font-size: 0.8rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Rörgodsberäkning enligt NGSA</h1>
+  <p class="small">
+    Beräknar minsta godstjocklek för rörledning vid inre övertryck enligt<br />
+    <code>T<sub>min</sub> = (DP · D) / (20 · f₀ · R<sub>t0,5</sub> · z)</code>.<br />
+    Materialvärden R<sub>t0,5</sub> avser 20&nbsp;°C.
+  </p>
+
+  <div class="card">
+    <div class="grid">
+      <div>
+        <label for="dp">DP – Beräkningstryck (bar)</label>
+        <input id="dp" type="number" step="0.01" />
+      </div>
+      <div>
+        <label for="d">D – Ytterdiameter (mm)</label>
+        <input id="d" type="number" step="0.1" />
+      </div>
+      <div>
+        <label for="f0">f₀ – Beräkningsfaktor</label>
+        <input id="f0" type="number" step="0.01" />
+        <div class="small">Enligt tabell 4.16 (zon, förläggning)</div>
+      </div>
+      <div>
+        <label for="z">z – Svetsfaktor</label>
+        <input id="z" type="number" step="0.01" value="1.0" />
+      </div>
+      <div>
+        <label for="material">Material</label>
+        <select id="material">
+          <!-- SS-EN ISO 3183 -->
+          <option value="L245NE">L245NE</option>
+          <option value="L245ME">L245ME</option>
+          <option value="L290NE">L290NE</option>
+          <option value="L290ME">L290ME</option>
+          <option value="L360NE">L360NE</option>
+          <option value="L360QE">L360QE</option>
+          <option value="L360ME">L360ME</option>
+          <option value="L415NE">L415NE</option>
+          <option value="L415QE">L415QE</option>
+          <option value="L415ME">L415ME</option>
+          <option value="L450QE">L450QE</option>
+          <option value="L450ME">L450ME</option>
+          <option value="L485QE">L485QE</option>
+          <option value="L485ME">L485ME</option>
+          <option value="L555QE">L555QE</option>
+          <option value="L555ME">L555ME</option>
+          <!-- ASME SA333 -->
+          <option value="SA333G6">SA333 Gr.6</option>
+        </select>
+      </div>
+      <div>
+        <label for="c">c – Korrosionstillägg (mm)</label>
+        <input id="c" type="number" step="0.1" value="0" />
+      </div>
+    </div>
+
+    <button type="button" onclick="calculate()">Beräkna godstjocklek</button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    // Materialdata: R_t0,5 vid 20 °C (N/mm²)
+    const materials = {
+      L245NE: 245,
+      L245ME: 245,
+      L290NE: 290,
+      L290ME: 290,
+      L360NE: 360,
+      L360QE: 360,
+      L360ME: 360,
+      L415NE: 415,
+      L415QE: 415,
+      L415ME: 415,
+      L450QE: 450,
+      L450ME: 450,
+      L485QE: 485,
+      L485ME: 485,
+      L555QE: 555,
+      L555ME: 555,
+      SA333G6: 220   // ASME SA-333 / ASTM A333 Gr.6, 20 °C
+    };
+
+    function round(value, decimals) {
+      const p = Math.pow(10, decimals);
+      return Math.round(value * p) / p;
+    }
+
+    function calculate() {
+      const dp = parseFloat(document.getElementById('dp').value);
+      const d = parseFloat(document.getElementById('d').value);
+      const f0 = parseFloat(document.getElementById('f0').value);
+      const z = parseFloat(document.getElementById('z').value);
+      const c = parseFloat(document.getElementById('c').value) || 0;
+      const matKey = document.getElementById('material').value;
+      const Rt = materials[matKey];
+
+      const resultDiv = document.getElementById('result');
+
+      if (isNaN(dp) || isNaN(d) || isNaN(f0) || isNaN(z) || !Rt) {
+        resultDiv.innerHTML = "<span style='color:#c00'>Fyll i alla värden korrekt.</span>";
+        return;
+      }
+
+      const Tmin = (dp * d) / (20 * f0 * Rt * z);
+      const Tnom = Tmin + c;
+
+      resultDiv.innerHTML = `
+        <strong>Resultat</strong><br/>
+        T<sub>min</sub> = ${round(Tmin, 2)} mm<br/>
+        T<sub>nom</sub> = ${round(Tnom, 2)} mm (inkl. korrosionstillägg c = ${round(c,2)} mm)<br/>
+        <span class="small">
+          Använt material: ${matKey}, R<sub>t0,5</sub> = ${Rt} N/mm² (20&nbsp;°C).<br/>
+          Obs: minustolerans a ingår inte – lägg till på T<sub>nom</sub> vid behov.
+        </span>
+      `;
+    }
+  </script>
+</body>
+</html>
