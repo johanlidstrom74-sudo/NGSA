@@ -4,6 +4,16 @@
   <meta charset="UTF-8" />
   <title>Rörgodstjocklek enligt NGSA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- PWA / iPhone som app -->
+  <meta name="theme-color" content="#5f46c6">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="NGSA Rörgodstjocklek">
+  <!-- Byt till riktig ikonfil om du vill -->
+  <link rel="apple-touch-icon" href="icon-192.png">
+
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -47,8 +57,13 @@
     input[readonly] {
       background: #f5f3ff;
     }
-    button {
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
       margin-top: 1rem;
+    }
+    button {
       padding: 0.6rem 1.4rem;
       border-radius: 999px;
       border: none;
@@ -58,8 +73,13 @@
       background: #5f46c6;
       color: #fff;
     }
+    button.secondary {
+      background: #ffffff;
+      color: #5f46c6;
+      border: 1px solid #5f46c6;
+    }
     button:hover {
-      background: #4a35a5;
+      filter: brightness(0.95);
     }
     .result {
       margin-top: 1.2rem;
@@ -107,7 +127,18 @@
       margin-top: 1rem;
       font-size: 0.8rem;
       color: #43336b;
-      text-align: center;
+      text-align: left;
+    }
+
+    /* PDF-läge – dölj knappar och bakgrund */
+    @media print {
+      body {
+        background: #ffffff;
+        padding: 0.5rem;
+      }
+      .buttons {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -124,7 +155,7 @@
     <div class="grid" style="margin-bottom:0.5rem">
       <div>
         <label for="location">Ledningens förläggning</label>
-        <select id="location" onchange="updateF0()">
+        <select id="location" onchange="updateF0Field()">
           <option value="kompressor">I kompressorstation, mätstation samt mät- och reglerstation.</option>
           <option value="utanSkydd">Utan skyddsrör i område för allmän väg och i spårområde för järnväg.</option>
           <option value="rorbrygga">I rörbrygga.</option>
@@ -137,7 +168,7 @@
       </div>
       <div>
         <label for="zone">Zon</label>
-        <select id="zone" onchange="updateF0()">
+        <select id="zone" onchange="updateF0Field()">
           <option value="A">Zon A</option>
           <option value="B">Zon B</option>
           <option value="C">Zon C</option>
@@ -209,7 +240,10 @@
       </div>
     </div>
 
-    <button type="button" onclick="calculate()">Beräkna godstjocklek</button>
+    <div class="buttons">
+      <button type="button" onclick="calculate()">Beräkna godstjocklek</button>
+      <button type="button" class="secondary" onclick="window.print()">Exportera till PDF</button>
+    </div>
 
     <div id="result" class="result"></div>
   </div>
@@ -229,21 +263,26 @@
       annan:     { A:0.72, B:0.60, C:0.50, D:0.40, T:0.30 }
     };
 
-    function updateF0() {
+    function getF0(location, zone) {
+      const row = f0Table[location];
+      if (!row) return NaN;
+      const val = row[zone];
+      return (val !== undefined) ? val : NaN;
+    }
+
+    function updateF0Field() {
       const loc = document.getElementById('location').value;
       const zone = document.getElementById('zone').value;
+      const f0 = getF0(loc, zone);
       const f0Input = document.getElementById('f0');
-
-      const row = f0Table[loc];
-      if (row && row[zone] !== undefined) {
-        f0Input.value = row[zone].toFixed(2);
+      if (!isNaN(f0)) {
+        f0Input.value = f0.toFixed(2);
       } else {
         f0Input.value = "";
       }
     }
 
     // Materialdata: R_t0,5 värden vid olika temperaturer
-    // Temps i °C, värden i N/mm²
     const materialData = {
       L245NE: { temps:[20,60], values:[245,245] },
       L245ME: { temps:[20,60], values:[245,245] },
@@ -261,7 +300,6 @@
       L485ME: { temps:[20,60], values:[485,485] },
       L555QE: { temps:[20,60], values:[555,555] },
       L555ME: { temps:[20,60], values:[555,555] },
-      // ASME SA333 Gr.6 (tabell 4.8)
       SA333G6:{ temps:[20,50,100], values:[220,217,206] }
     };
 
@@ -294,7 +332,6 @@
     }
 
     // NGSA tabell 4.17 – Minsta nominella godstjocklek (gäller ej rostfritt)
-    // Vi använder Dy (ytterdiameter) för att hitta rekommenderad minsta Tnom.
     const minTnomTable = [
       { Dy: 60.3, t: 3.2 },
       { Dy: 76.1, t: 3.2 },
@@ -308,7 +345,6 @@
       { Dy:406.4, t: 6.3 },
       { Dy:508.0, t: 6.3 },
       { Dy:609.4, t: 6.3 }
-      // > 609,4: 1 % av Dy hanteras separat
     ];
 
     function getRecommendedTnom(Dy) {
@@ -317,7 +353,6 @@
           return { t: minTnomTable[i].t, rule: `Tabell 4.17, Dy ≤ ${minTnomTable[i].Dy} mm` };
         }
       }
-      // > 609.4 mm -> 1 % av Dy
       return { t: Dy * 0.01, rule: "Tabell 4.17, Dy > 609,4 mm (1 % av Dy)" };
     }
 
@@ -327,18 +362,22 @@
     }
 
     function calculate() {
-      const dp = parseFloat(document.getElementById('dp').value);
-      const d  = parseFloat(document.getElementById('d').value);
-      const z  = parseFloat(document.getElementById('z').value);
-      const a  = parseFloat(document.getElementById('a').value) || 0;
-      const c  = parseFloat(document.getElementById('c').value) || 0;
-      const f0 = parseFloat(document.getElementById('f0').value);
+      const dp   = parseFloat(document.getElementById('dp').value);
+      const d    = parseFloat(document.getElementById('d').value);
+      const z    = parseFloat(document.getElementById('z').value);
+      const a    = parseFloat(document.getElementById('a').value) || 0;
+      const c    = parseFloat(document.getElementById('c').value) || 0;
       const matKey = document.getElementById('material').value;
       const temp   = parseFloat(document.getElementById('temp').value);
+      const loc  = document.getElementById('location').value;
+      const zone = document.getElementById('zone').value;
+
       const resultDiv = document.getElementById('result');
 
+      const f0 = getF0(loc, zone);
+
       if (isNaN(dp) || isNaN(d) || isNaN(z) || isNaN(f0) || isNaN(temp)) {
-        resultDiv.innerHTML = "<span style='color:#c00'>Fyll i alla värden (tryck, diameter, svetsfaktor, temperatur) och se till att f₀ är satt.</span>";
+        resultDiv.innerHTML = "<span style='color:#c00'>Fyll i alla värden (tryck, diameter, svetsfaktor, temperatur) och kontrollera förläggning/zon.</span>";
         return;
       }
 
@@ -351,3 +390,63 @@
       const note = interp.note;
 
       const Tmin = (dp * d) / (20 * f0 * Rt * z);
+      const Tnom = Tmin + a + c;
+
+      const rec = getRecommendedTnom(d);
+      const recT = rec.t;
+      const recRule = rec.rule;
+
+      const isTooThin = Tnom + 1e-6 < recT;
+
+      let recHtml = `
+        <div class="small">
+          Rekommenderad minsta T<sub>nom</sub> enligt NGSA tabell 4.17 för Dy = ${round(d,1)} mm:<br/>
+          T<sub>nom,rekommenderad</sub> ≈ ${round(recT,2)} mm (${recRule}).
+        </div>
+      `;
+
+      let warnHtml = "";
+      if (isTooThin) {
+        warnHtml = `
+          <div class="warning">
+            Varning: Beräknad T<sub>nom</sub> = ${round(Tnom,2)} mm är tunnare än
+            rekommenderad minsta T<sub>nom</sub> = ${round(recT,2)} mm enligt NGSA tabell 4.17.
+            Öka godstjockleken eller välj större nominell tjocklek.
+          </div>
+        `;
+      } else {
+        warnHtml = `
+          <div class="ok">
+            Beräknad T<sub>nom</sub> uppfyller rekommenderad minsta tjocklek enligt NGSA tabell 4.17.
+          </div>
+        `;
+      }
+
+      resultDiv.innerHTML = `
+        <div class="result-main">
+          <span class="label">T<sub>min</sub>:</span>
+          <span class="value"> ${round(Tmin, 2)} mm</span><br/>
+          <span class="label">T<sub>nom</sub>:</span>
+          <span class="value"> ${round(Tnom, 2)} mm</span>
+          <span class="small">(inkl. a = ${round(a,2)} mm, c = ${round(c,2)} mm)</span>
+        </div>
+        ${recHtml}
+        ${warnHtml}
+        <br/>
+        <span class="small">
+          Vald zon/förläggning ger f₀ = ${round(f0,2)}.<br/>
+          Material: ${matKey}, R<sub>t0,5</sub> ≈ ${round(Rt,1)} N/mm² vid ${round(temp,1)} °C.<br/>
+          ${note}<br/>
+          Obs: tabell 4.17 gäller inte rostfritt stål.
+        </span>
+      `;
+
+      // uppdatera visningsfältet för f0
+      updateF0Field();
+    }
+
+    // initiera f0 när sidan laddas
+    window.addEventListener('load', updateF0Field);
+  </script>
+</body>
+</html>
