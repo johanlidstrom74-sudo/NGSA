@@ -56,6 +56,17 @@
     input[readonly] {
       background: #f5f3ff;
     }
+
+    /* Ta bort små rullistor (spinners) på number-fält */
+    input[type=number]::-webkit-outer-spin-button,
+    input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
     .buttons {
       display: flex;
       flex-wrap: wrap;
@@ -128,10 +139,50 @@
       color: #43336b;
       text-align: left;
     }
+
+    /* PDF / utskrift – komprimerad layout */
     @media print {
       body {
         background: #ffffff;
-        padding: 0.5rem;
+        padding: 0.3rem;
+      }
+      h1 {
+        font-size: 1.3rem;
+        margin-bottom: 0.1rem;
+      }
+      .card {
+        box-shadow: none;
+        padding: 0.8rem 0.9rem 0.7rem;
+        margin-top: 0.3rem;
+        max-width: 100%;
+      }
+      .grid {
+        gap: 0.4rem 0.5rem;
+      }
+      h2 {
+        font-size: 0.95rem !important;
+        margin-top: 0.4rem !important;
+        margin-bottom: 0.2rem !important;
+      }
+      .result {
+        font-size: 0.9rem;
+        margin-top: 0.6rem;
+        padding-top: 0.5rem;
+      }
+      .result-main {
+        font-size: 1rem;
+      }
+      .small {
+        font-size: 0.7rem;
+      }
+      .warning, .ok {
+        font-size: 0.8rem;
+        margin-top: 0.3rem;
+        padding: 0.25rem 0.45rem;
+      }
+      footer {
+        font-size: 0.7rem;
+        margin-top: 0.4rem;
       }
       .buttons {
         display: none;
@@ -185,7 +236,6 @@
       <div>
         <label for="material">Material</label>
         <select id="material">
-          <!-- Hopslagna ISO 3183-material (tabell 4.7) -->
           <option value="L245">L245 (L245NE/ME)</option>
           <option value="L290">L290 (L290NE/ME)</option>
           <option value="L360">L360 (L360NE/QE/ME)</option>
@@ -193,13 +243,12 @@
           <option value="L450">L450 (L450QE/ME)</option>
           <option value="L485">L485 (L485QE/ME)</option>
           <option value="L555">L555 (L555QE/ME)</option>
-          <!-- ASME SA333 -->
           <option value="SA333G6">SA333 Gr.6</option>
         </select>
       </div>
       <div>
         <label for="temp">Beräkningstemperatur (°C)</label>
-        <input id="temp" type="number" step="1" value="20" />
+        <input id="temp" type="number" value="20" />
         <div class="small">Linjär interpolering mellan tabelltemperaturer.</div>
       </div>
     </div>
@@ -208,23 +257,23 @@
     <div class="grid">
       <div>
         <label for="dp">DP – Beräkningstryck (bar)</label>
-        <input id="dp" type="number" step="0.01" />
+        <input id="dp" type="number" />
       </div>
       <div>
         <label for="d">D – Ytterdiameter Dy (mm)</label>
-        <input id="d" type="number" step="0.1" />
+        <input id="d" type="number" />
       </div>
       <div>
         <label for="z">z – Svetsfaktor</label>
-        <input id="z" type="number" step="0.01" value="1.0" />
+        <input id="z" type="number" value="1.0" />
       </div>
       <div>
         <label for="a">a – Minustolerans (mm)</label>
-        <input id="a" type="number" step="0.1" value="0" />
+        <input id="a" type="number" value="0" />
       </div>
       <div>
         <label for="c">c – Korrosionstillägg (mm)</label>
-        <input id="c" type="number" step="0.1" value="0" />
+        <input id="c" type="number" value="0" />
       </div>
     </div>
 
@@ -270,7 +319,7 @@
       }
     }
 
-    // Materialdata: R_t0,5 värden vid olika temperaturer, hopslagda grupper
+    // Materialdata: R_t0,5
     const materialData = {
       L245: { temps:[20,60], values:[245,245] },
       L290: { temps:[20,60], values:[290,290] },
@@ -310,7 +359,7 @@
       return null;
     }
 
-    // NGSA tabell 4.17 – minsta nominella godstjocklek (ej rostfritt)
+    // NGSA tabell 4.17 – minsta nominella godstjocklek
     const minTnomTable = [
       { Dy: 60.3, t: 3.2 },
       { Dy: 76.1, t: 3.2 },
